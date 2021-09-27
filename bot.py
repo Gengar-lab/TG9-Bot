@@ -1,9 +1,15 @@
-""""
+"""
+------------------------------------------------------------------------------
 Copyright © Krypton 2021 - https://github.com/kkrypt0nn
 Description:
 This is a template to create your own discord bot in python.
 
 Version: 2.8
+------------------------------------------------------------------------------
+Copyright © Xoti-lab 2021 - https://github.com/Xoti-lab
+
+Version: 1.1
+------------------------------------------------------------------------------
 """
 
 import json
@@ -12,9 +18,14 @@ import platform
 import random
 import sys
 
+from dotenv import load_dotenv
+
 import discord
 from discord.ext import commands, tasks
 from discord.ext.commands import Bot
+
+load_dotenv()
+TOKEN = os.environ.get("TOKEN")
 
 if not os.path.isfile("config.json"):
     sys.exit("'config.json' not found! Please add it and try again.")
@@ -69,10 +80,12 @@ async def on_ready():
 
 
 # Setup the game status task of the bot
-@tasks.loop(minutes=1.0)
+@tasks.loop(minutes=60.0)
 async def status_task():
-    statuses = ["with you!", "with Krypton!", f"{config['bot_prefix']}help", "with humans!"]
-    await bot.change_presence(activity=discord.Game(random.choice(statuses)))
+    with open("config.json") as file:
+        body = json.load(file)
+        statuses = [status for status in body['statuses']]
+        await bot.change_presence(status=discord.Status.idle, activity=discord.Game(random.choice(statuses)))
 
 
 # Removes the default help command of discord.py to be able to create our custom help command.
@@ -147,4 +160,4 @@ async def on_command_error(context, error):
 
 
 # Run the bot with the token
-bot.run(config["token"])
+bot.run(TOKEN)

@@ -16,6 +16,8 @@ import aiohttp
 import discord
 from discord.ext import commands
 
+BOT_VERSION = 1.1
+
 if not os.path.isfile("config.json"):
     sys.exit("'config.json' not found! Please add it and try again.")
 else:
@@ -33,7 +35,7 @@ class general(commands.Cog, name="general"):
         Get some useful (or not) information about the bot.
         """
         embed = discord.Embed(
-            description="Used Krypton's template",
+            description="Made by Gengar",
             color=0x42F56C
         )
         embed.set_author(
@@ -41,7 +43,12 @@ class general(commands.Cog, name="general"):
         )
         embed.add_field(
             name="Owner:",
-            value="Krypton#2188",
+            value="TheGriffin999",
+            inline=True
+        )
+        embed.add_field(
+            name="Bot Version:",
+            value=f"{BOT_VERSION}",
             inline=True
         )
         embed.add_field(
@@ -121,21 +128,21 @@ class general(commands.Cog, name="general"):
         )
         await context.send(embed=embed)
 
-    @commands.command(name="invite")
-    async def invite(self, context):
-        """
-        Get the invite link of the bot to be able to invite it.
-        """
-        embed = discord.Embed(
-            description=f"Invite me by clicking [here](https://discordapp.com/oauth2/authorize?&client_id={config['application_id']}&scope=bot&permissions=470150263).",
-            color=0xD75BF4
-        )
-        try:
-            # To know what permissions to give to your bot, please see here: https://discordapi.com/permissions.html and remember to not give Administrator permissions.
-            await context.author.send(embed=embed)
-            await context.send("I sent you a private message!")
-        except discord.Forbidden:
-            await context.send(embed=embed)
+    # @commands.command(name="invite")
+    # async def invite(self, context):
+    #     """
+    #     Get the invite link of the bot to be able to invite it.
+    #     """
+    #     embed = discord.Embed(
+    #         description=f"Invite me by clicking [here](https://discordapp.com/oauth2/authorize?&client_id={config['application_id']}&scope=bot&permissions=470150263).",
+    #         color=0xD75BF4
+    #     )
+    #     try:
+    #         # To know what permissions to give to your bot, please see here: https://discordapi.com/permissions.html and remember to not give Administrator permissions.
+    #         await context.author.send(embed=embed)
+    #         await context.send("I sent you a private message!")
+    #     except discord.Forbidden:
+    #         await context.send(embed=embed)
 
     @commands.command(name="server", aliases=["support", "supportserver"])
     async def server(self, context):
@@ -143,7 +150,7 @@ class general(commands.Cog, name="general"):
         Get the invite link of the discord server of the bot for some support.
         """
         embed = discord.Embed(
-            description=f"Join the support server for the bot by clicking [here](https://discord.gg/HzJ3Gfr).",
+            description=f"Join the support server for the bot by clicking [here](https://discord.gg/Z4vEvCC8Vf).",
             color=0xD75BF4
         )
         try:
@@ -189,24 +196,6 @@ class general(commands.Cog, name="general"):
             text=f"The question was: {question}"
         )
         await context.send(embed=embed)
-
-    @commands.command(name="bitcoin")
-    async def bitcoin(self, context):
-        """
-        Get the current price of bitcoin.
-        """
-        url = "https://api.coindesk.com/v1/bpi/currentprice/BTC.json"
-        # Async HTTP request
-        async with aiohttp.ClientSession() as session:
-            raw_response = await session.get(url)
-            response = await raw_response.text()
-            response = json.loads(response)
-            embed = discord.Embed(
-                title=":information_source: Info",
-                description=f"Bitcoin price is: ${response['bpi']['USD']['rate']}",
-                color=0x42F56C
-            )
-            await context.send(embed=embed)
 
 
 def setup(bot):

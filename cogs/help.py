@@ -29,11 +29,14 @@ class Help(commands.Cog, name="help"):
         """
         List all commands from every Cog the bot has loaded.
         """
+        blacklist_cogs = ['owner']
         prefix = config["bot_prefix"]
         if not isinstance(prefix, str):
             prefix = prefix[0]
         embed = discord.Embed(title="Help", description="List of available commands:", color=0x42F56C)
         for i in self.bot.cogs:
+            if i in blacklist_cogs:
+                continue
             cog = self.bot.get_cog(i.lower())
             commands = cog.get_commands()
             command_list = [command.name for command in commands]

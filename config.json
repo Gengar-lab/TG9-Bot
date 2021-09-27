@@ -1,9 +1,16 @@
 {
-  "bot_prefix": "YOUR_BOT_PREFIX_HERE",
-  "token": "YOUR_BOT_TOKEN_HERE",
-  "application_id": "YOUR_APPLICATION_ID_HERE",
-  "owners": [
-    123456789,
-    987654321
-  ]
+    "bot_prefix": "Tg9 ",
+    "owners": [
+        559740429373931530,
+        747801048802000957
+    ],
+    "statuses": [
+        "Subscribe to TheGriffin999!",
+        "Tg9 help",
+        "gas gas gas",
+        "Playing Bedwars bcoz why not!",
+        "I wanna GodBridge",
+        "Griff bought new mouse, I'm jealous",
+        "Griff says \"new video would be a banger!\""
+    ]
 }

@@ -26,7 +26,7 @@ class owner(commands.Cog, name="owner"):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(name="shutdown")
+    @commands.command(name="shutdown", aliases=["sd", "sleep"])
     async def shutdown(self, context):
         """
         Make the bot shutdown
@@ -164,6 +164,129 @@ class owner(commands.Cog, name="owner"):
                 embed = discord.Embed(
                     title="Error!",
                     description=f"**{member.name}** is not in the blacklist.",
+                    color=0xE02B2B
+                )
+                await context.send(embed=embed)
+        else:
+            embed = discord.Embed(
+                title="Error!",
+                description="You don't have the permission to use this command.",
+                color=0xE02B2B
+            )
+            await context.send(embed=embed)
+
+    @commands.group(name="status")
+    async def status(self, context):
+        """
+        Lets you add or remove a status from a list of statuses
+        """
+        if context.invoked_subcommand is None:
+            with open("config.json") as file:
+                body = json.load(file)
+            embed = discord.Embed(
+                title=f"There are currently {len(body['statuses'])} statuses",
+                description=f"{', '.join(str(id) for id in body['statuses'])}",
+                color=0x0000FF
+            )
+            await context.send(embed=embed)
+
+    @status.command(name="add")
+    async def status_add(self, context, *, args):
+        """
+        Lets you add a status to the list of statuses
+        """
+        if context.message.author.id in config["owners"]:
+            try:
+                with open("config.json") as file:
+                    body = json.load(file)
+                if (args in body['statuses']):
+                    embed = discord.Embed(
+                        title="Error!",
+                        description=f"**{args}** is already in the statuses.",
+                        color=0xE02B2B
+                    )
+                    await context.send(embed=embed)
+                    return
+                json_manager.add_status_to_config(args)
+                embed = discord.Embed(
+                    title="Status Added",
+                    description=f"**{args}** has been successfully added to the statuses.",
+                    color=0x42F56C
+                )
+                with open("config.json") as file:
+                    body = json.load(file)
+                embed.set_footer(
+                    text=f"There are now {len(body['statuses'])} statuses."
+                )
+                await context.send(embed=embed)
+            except:
+                embed = discord.Embed(
+                    title="Error!",
+                    description=f"An unknown error occurred when trying to add **{args}** to the statuses..",
+                    color=0xE02B2B
+                )
+                await context.send(embed=embed)
+        else:
+            embed = discord.Embed(
+                title="Error!",
+                description="You don't have the permission to use this command.",
+                color=0xE02B2B
+            )
+            await context.send(embed=embed)
+
+    @status.command(name="remove")
+    async def status_remove(self, context, *, args):
+        """
+        Lets you remove a status from the list of statuses
+        """
+        if context.message.author.id in config["owners"]:
+            try:
+                json_manager.remove_status_from_config(args)
+                embed = discord.Embed(
+                    title="Status removed from statuses",
+                    description=f"**{args}** has been successfully removed from the statuses.",
+                    color=0x42F56C
+                )
+                with open("config.json") as file:
+                    body = json.load(file)
+                embed.set_footer(
+                    text=f"There are now {len(body['statuses'])} statuses."
+                )
+                await context.send(embed=embed)
+            except:
+                embed = discord.Embed(
+                    title="Error!",
+                    description=f"**{args}** is not in the statuses.",
+                    color=0xE02B2B
+                )
+                await context.send(embed=embed)
+        else:
+            embed = discord.Embed(
+                title="Error!",
+                description="You don't have the permission to use this command.",
+                color=0xE02B2B
+            )
+            await context.send(embed=embed)
+
+    @status.command(name="set")
+    async def status_set(self, context, *, args):
+        """
+        Lets you set the status of the bot
+        """
+        if context.message.author.id in config["owners"]:
+            try:
+                await context.bot.change_presence(status=discord.Status.idle, activity=discord.Game(args))
+                embed = discord.Embed(
+                    title="Status set",
+                    description=f"**{args}** has been successfully set to bot.",
+                    color=0x42F56C
+                )
+                await context.send(embed=embed)
+            except Exception as e:
+                print(e)
+                embed = discord.Embed(
+                    title="Error!",
+                    description=f"**{args}** was unable to be set.",
                     color=0xE02B2B
                 )
                 await context.send(embed=embed)
