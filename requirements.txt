@@ -1,4 +1,6 @@
 aiohttp
 asyncio
 discord.py
+pynacl
+youtube-dl
 python-dotenv
