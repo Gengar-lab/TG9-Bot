@@ -13,6 +13,8 @@ from discord.ext import commands
 from async_timeout import timeout
 from youtube_dl import YoutubeDL
 
+# pylint: disable=too-many-instance-attributes, protected-access
+
 FFMPEG_OPTIONS = {
     "before_options": "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5",
     "options": "-vn",
@@ -42,6 +44,7 @@ class VoiceChError(Exception):
 
 
 class YTDLSource:
+    """Create YTDL Source for playing music"""
 
     def __init__(self, source, *, data, requester):
         self.source = source
@@ -55,6 +58,8 @@ class YTDLSource:
 
     @classmethod
     async def create_source(cls, context, search: str, *, loop):
+        """Create source from song name"""
+
         loop = loop or asyncio.get_event_loop()
 
         data = ytdl.extract_info(f"ytsearch:{search}", download=False)
@@ -75,9 +80,10 @@ class YTDLSource:
 
 
 class MusicPlayer:
+    """Music player loop"""
 
     __slots__ = ("bot", "_guild", "_channel", "_cog",
-                 "queue", "next", "current", "np")
+                 "queue", "next", "current", "now_playing_msg")
 
     def __init__(self, context):
         self.bot = context.bot
@@ -88,7 +94,7 @@ class MusicPlayer:
         self.queue = asyncio.Queue()
         self.next = asyncio.Event()
 
-        self.np = None  # Now playing message
+        self.now_playing_msg = None  # Now playing message
         self.current = None
 
         context.bot.loop.create_task(self.player_loop())
@@ -106,9 +112,9 @@ class MusicPlayer:
                 async with timeout(300):  # 5 minutes...
                     source = await self.queue.get()
             except asyncio.TimeoutError:
-                embed=discord.Embed(title="Disconnected",
-                description="Bot Disconnected due to Emptiness feeling",
-                color=0xE02B2B)
+                embed = discord.Embed(title="Disconnected",
+                                      description="Bot Disconnected due to Emptiness feeling",
+                                      color=0xE02B2B)
                 await self._channel.send(embed=embed)
                 return self.destroy(self._guild)
 
@@ -118,8 +124,9 @@ class MusicPlayer:
                                           after=lambda _: self.bot.loop.call_soon_threadsafe(
                                               self.next.set)
                                           )
-            self.np = await self._channel.send(f"**Now Playing:** `{source.title}` requested by "
-                                               f"`{source.requester}`\n{source.webpage_url}")
+            np_text = (f"**Now Playing:** `{source.title}` requested by "
+                       f"`{source.requester}`\n{source.webpage_url}")
+            self.now_playing_msg = await self._channel.send(np_text)
             await self.next.wait()
 
             # Make sure the FFmpeg process is cleaned up.
@@ -128,7 +135,7 @@ class MusicPlayer:
 
             try:
                 # We are no longer playing this song...
-                await self.np.delete()
+                await self.now_playing_msg.delete()
             except discord.HTTPException:
                 pass
 
@@ -145,6 +152,8 @@ class Music(commands.Cog, name="music"):
         self.players = {}
 
     async def cleanup(self, guild):
+        """Cleanup player of guild where bot has stopped playing music"""
+
         try:
             await guild.voice_client.disconnect()
         except AttributeError:
@@ -220,8 +229,8 @@ class Music(commands.Cog, name="music"):
     async def disconnect(self, context):
         """Disconnect from voice channel"""
 
-        vc = context.voice_client
-        if not vc or not vc.is_connected():
+        vc_client = context.voice_client
+        if not vc_client or not vc_client.is_connected():
             embed = discord.Embed(description="Bot already disconnected",
                                   color=0x42F56C)
             return await context.send(embed=embed)
@@ -236,16 +245,16 @@ class Music(commands.Cog, name="music"):
     async def queue_info(self, context):
         """Diaplays Song Queue"""
 
-        vc = context.voice_client
+        vc_client = context.voice_client
 
-        if not vc or not vc.is_connected():
+        if not vc_client or not vc_client.is_connected():
             return await context.send("I am not currently connected to voice!", delete_after=20)
 
         player = self.get_player(context)
         if player.queue.empty():
             embed = discord.Embed(title="Empty Queue",
-            description = "There are currently no more queued songs.",
-            color=0xFF8C00)
+                                  description="There are currently no more queued songs.",
+                                  color=0xFF8C00)
             return await context.send(embed=embed)
 
         # Grab up to 5 entries from the queue...
@@ -261,9 +270,9 @@ class Music(commands.Cog, name="music"):
     async def now_playing(self, context):
         """Shows current playing song"""
 
-        vc = context.voice_client
+        vc_client = context.voice_client
 
-        if not vc or not vc.is_connected():
+        if not vc_client or not vc_client.is_connected():
             return await context.send("I am not currently connected to voice!", delete_after=20)
 
         player = self.get_player(context)
@@ -272,13 +281,13 @@ class Music(commands.Cog, name="music"):
 
         try:
             # Remove our previous now_playing message.
-            await player.np.delete()
+            await player.now_playing_msg.delete()
         except discord.HTTPException:
             pass
 
-        player.np = await context.send(f"**Now Playing:** `{player.current.title}` "
-                                       f"requested by `{player.current.requester}`"
-                                       f"\n{player.current.webpage_url}")
+        player.now_playing_msg = await context.send(f"**Now Playing:** `{player.current.title}` "
+                                                    f"requested by `{player.current.requester}`"
+                                                    f"\n{player.current.webpage_url}")
 
 
 def setup(bot):

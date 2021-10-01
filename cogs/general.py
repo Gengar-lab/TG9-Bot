@@ -1,39 +1,30 @@
-""""
-Copyright © Krypton 2021 - https://github.com/kkrypt0nn
-Description:
-This is a template to create your own discord bot in python.
-
-Version: 2.7
+"""
+Stores general commands of Bot
 """
 
 import json
-import os
 import platform
 import random
-import sys
 
-import aiohttp
 import discord
 from discord.ext import commands
 
 BOT_VERSION = 1.1
 
-if not os.path.isfile("config.json"):
-    sys.exit("'config.json' not found! Please add it and try again.")
-else:
-    with open("config.json") as file:
-        config = json.load(file)
+with open("config.json", encoding="utf-8") as file:
+    config = json.load(file)
 
 
-class general(commands.Cog, name="general"):
+class General(commands.Cog, name="general"):
+    """General Commands"""
+
     def __init__(self, bot):
         self.bot = bot
 
     @commands.command(name="info", aliases=["botinfo"])
     async def info(self, context):
-        """
-        Get some useful (or not) information about the bot.
-        """
+        """Get some useful (or not) information about the bot."""
+
         embed = discord.Embed(
             description="Made by Gengar",
             color=0x42F56C
@@ -68,9 +59,8 @@ class general(commands.Cog, name="general"):
 
     @commands.command(name="serverinfo")
     async def serverinfo(self, context):
-        """
-        Get some useful (or not) information about the server.
-        """
+        """Get some useful (or not) information about the server."""
+
         server = context.message.guild
         roles = [x.name for x in server.roles]
         role_length = len(roles)
@@ -118,9 +108,8 @@ class general(commands.Cog, name="general"):
 
     @commands.command(name="ping")
     async def ping(self, context):
-        """
-        Check if the bot is alive.
-        """
+        """Check if the bot is alive."""
+
         embed = discord.Embed(
             title="🏓 Pong!",
             description=f"The bot latency is {round(self.bot.latency * 1000)}ms.",
@@ -128,29 +117,13 @@ class general(commands.Cog, name="general"):
         )
         await context.send(embed=embed)
 
-    # @commands.command(name="invite")
-    # async def invite(self, context):
-    #     """
-    #     Get the invite link of the bot to be able to invite it.
-    #     """
-    #     embed = discord.Embed(
-    #         description=f"Invite me by clicking [here](https://discordapp.com/oauth2/authorize?&client_id={config['application_id']}&scope=bot&permissions=470150263).",
-    #         color=0xD75BF4
-    #     )
-    #     try:
-    #         # To know what permissions to give to your bot, please see here: https://discordapi.com/permissions.html and remember to not give Administrator permissions.
-    #         await context.author.send(embed=embed)
-    #         await context.send("I sent you a private message!")
-    #     except discord.Forbidden:
-    #         await context.send(embed=embed)
-
     @commands.command(name="server", aliases=["support", "supportserver"])
     async def server(self, context):
-        """
-        Get the invite link of the discord server of the bot for some support.
-        """
+        """Get the invite link of the discord server of the bot for some support."""
+
+        server_link = "https://discord.gg/Z4vEvCC8Vf"
         embed = discord.Embed(
-            description=f"Join the support server for the bot by clicking [here](https://discord.gg/Z4vEvCC8Vf).",
+            description=f"Join the support server for the bot by clicking [here]({server_link}).",
             color=0xD75BF4
         )
         try:
@@ -161,9 +134,8 @@ class general(commands.Cog, name="general"):
 
     @commands.command(name="poll")
     async def poll(self, context, *, title):
-        """
-        Create a poll where members can vote.
-        """
+        """Create a poll where members can vote."""
+
         embed = discord.Embed(
             title="A new poll has been created!",
             description=f"{title}",
@@ -179,14 +151,14 @@ class general(commands.Cog, name="general"):
 
     @commands.command(name="8ball")
     async def eight_ball(self, context, *, question):
-        """
-        Ask any question to the bot.
-        """
-        answers = ['It is certain.', 'It is decidedly so.', 'You may rely on it.', 'Without a doubt.',
-                   'Yes - definitely.', 'As I see, yes.', 'Most likely.', 'Outlook good.', 'Yes.',
-                   'Signs point to yes.', 'Reply hazy, try again.', 'Ask again later.', 'Better not tell you now.',
-                   'Cannot predict now.', 'Concentrate and ask again later.', 'Don\'t count on it.', 'My reply is no.',
-                   'My sources say no.', 'Outlook not so good.', 'Very doubtful.']
+        """Ask any question to the bot."""
+
+        answers = ["It is certain.", "It is decidedly so.", "You may rely on it.",
+                   "Without a doubt.", "Yes - definitely.", "As I see, yes.", "Most likely.",
+                   "Outlook good.", "Yes.", "Signs point to yes.", "Reply hazy, try again.",
+                   "Ask again later.", "Better not tell you now.", "Cannot predict now.",
+                   "Concentrate and ask again later.", "Don't count on it.", "My reply is no.",
+                   "My sources say no.", "Outlook not so good.", "Very doubtful."]
         embed = discord.Embed(
             title="**My Answer:**",
             description=f"{answers[random.randint(0, len(answers))]}",
@@ -199,4 +171,5 @@ class general(commands.Cog, name="general"):
 
 
 def setup(bot):
-    bot.add_cog(general(bot))
+    """Add General commands to cogs"""
+    bot.add_cog(General(bot))

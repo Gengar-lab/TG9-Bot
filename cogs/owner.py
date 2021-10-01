@@ -1,36 +1,30 @@
-""""
-Copyright © Krypton 2021 - https://github.com/kkrypt0nn
-Description:
-This is a template to create your own discord bot in python.
-
-Version: 2.7
+"""
+Stores owner commands of Bot
 """
 
 import json
-import os
-import sys
 
 import discord
 from discord.ext import commands
 
+# pylint: disable=bare-except, import-error
+# Why Pylint why
 from helpers import json_manager
 
-if not os.path.isfile("config.json"):
-    sys.exit("'config.json' not found! Please add it and try again.")
-else:
-    with open("config.json") as file:
-        config = json.load(file)
+with open("config.json", encoding="utf-8") as file:
+    config = json.load(file)
 
 
-class owner(commands.Cog, name="owner"):
+class Owner(commands.Cog, name="owner"):
+    """Owner Commands"""
+
     def __init__(self, bot):
         self.bot = bot
 
     @commands.command(name="shutdown", aliases=["sd", "sleep"])
     async def shutdown(self, context):
-        """
-        Make the bot shutdown
-        """
+        """Make the bot shutdown"""
+
         if context.message.author.id in config["owners"]:
             embed = discord.Embed(
                 description="Shutting down. Bye! :wave:",
@@ -48,9 +42,8 @@ class owner(commands.Cog, name="owner"):
 
     @commands.command(name="say", aliases=["echo"])
     async def say(self, context, *, args):
-        """
-        The bot will say anything you want.
-        """
+        """The bot will say anything you want."""
+
         if context.message.author.id in config["owners"]:
             await context.send(args)
         else:
@@ -63,9 +56,8 @@ class owner(commands.Cog, name="owner"):
 
     @commands.command(name="embed")
     async def embed(self, context, *, args):
-        """
-        The bot will say anything you want, but within embeds.
-        """
+        """The bot will say anything you want, but within embeds."""
+
         if context.message.author.id in config["owners"]:
             embed = discord.Embed(
                 description=args,
@@ -82,12 +74,11 @@ class owner(commands.Cog, name="owner"):
 
     @commands.group(name="blacklist")
     async def blacklist(self, context):
-        """
-        Lets you add or remove a user from not being able to use the bot.
-        """
+        """Lets you add or remove a user from not being able to use the bot."""
+
         if context.invoked_subcommand is None:
-            with open("blacklist.json") as file:
-                blacklist = json.load(file)
+            with open("blacklist.json", encoding="utf-8") as infile:
+                blacklist = json.load(infile)
             embed = discord.Embed(
                 title=f"There are currently {len(blacklist['ids'])} blacklisted IDs",
                 description=f"{', '.join(str(id) for id in blacklist['ids'])}",
@@ -97,15 +88,14 @@ class owner(commands.Cog, name="owner"):
 
     @blacklist.command(name="add")
     async def blacklist_add(self, context, member: discord.Member = None):
-        """
-        Lets you add a user from not being able to use the bot.
-        """
+        """Lets you add a user from not being able to use the bot."""
+
         if context.message.author.id in config["owners"]:
-            userID = member.id
+            user_id = member.id
             try:
-                with open("blacklist.json") as file:
-                    blacklist = json.load(file)
-                if (userID in blacklist['ids']):
+                with open("blacklist.json", encoding="utf-8") as infile:
+                    blacklist = json.load(infile)
+                if user_id in blacklist['ids']:
                     embed = discord.Embed(
                         title="Error!",
                         description=f"**{member.name}** is already in the blacklist.",
@@ -113,14 +103,14 @@ class owner(commands.Cog, name="owner"):
                     )
                     await context.send(embed=embed)
                     return
-                json_manager.add_user_to_blacklist(userID)
+                json_manager.add_user_to_blacklist(user_id)
                 embed = discord.Embed(
                     title="User Blacklisted",
                     description=f"**{member.name}** has been successfully added to the blacklist",
                     color=0x42F56C
                 )
-                with open("blacklist.json") as file:
-                    blacklist = json.load(file)
+                with open("blacklist.json", encoding="utf-8") as infile:
+                    blacklist = json.load(infile)
                 embed.set_footer(
                     text=f"There are now {len(blacklist['ids'])} users in the blacklist"
                 )
@@ -128,7 +118,8 @@ class owner(commands.Cog, name="owner"):
             except:
                 embed = discord.Embed(
                     title="Error!",
-                    description=f"An unknown error occurred when trying to add **{member.name}** to the blacklist.",
+                    description=("An unknown error occurred when trying to add "
+                                 f"**{member.name}** to the blacklist."),
                     color=0xE02B2B
                 )
                 await context.send(embed=embed)
@@ -142,20 +133,20 @@ class owner(commands.Cog, name="owner"):
 
     @blacklist.command(name="remove")
     async def blacklist_remove(self, context, member: discord.Member = None):
-        """
-        Lets you remove a user from not being able to use the bot.
-        """
+        """Lets you remove a user from not being able to use the bot."""
+
         if context.message.author.id in config["owners"]:
-            userID = member.id
+            user_id = member.id
             try:
-                json_manager.remove_user_from_blacklist(userID)
+                json_manager.remove_user_from_blacklist(user_id)
                 embed = discord.Embed(
                     title="User removed from blacklist",
-                    description=f"**{member.name}** has been successfully removed from the blacklist",
+                    description=(f"**{member.name}** has been successfully "
+                                 "removed from the blacklist"),
                     color=0x42F56C
                 )
-                with open("blacklist.json") as file:
-                    blacklist = json.load(file)
+                with open("blacklist.json", encoding="utf-8") as infile:
+                    blacklist = json.load(infile)
                 embed.set_footer(
                     text=f"There are now {len(blacklist['ids'])} users in the blacklist"
                 )
@@ -177,12 +168,11 @@ class owner(commands.Cog, name="owner"):
 
     @commands.group(name="status")
     async def status(self, context):
-        """
-        Lets you add or remove a status from a list of statuses
-        """
+        """Lets you add or remove a status from a list of statuses"""
+
         if context.invoked_subcommand is None:
-            with open("config.json") as file:
-                body = json.load(file)
+            with open("config.json", encoding="utf-8") as infile:
+                body = json.load(infile)
             embed = discord.Embed(
                 title=f"There are currently {len(body['statuses'])} statuses",
                 description=f"{', '.join(str(id) for id in body['statuses'])}",
@@ -192,14 +182,13 @@ class owner(commands.Cog, name="owner"):
 
     @status.command(name="add")
     async def status_add(self, context, *, args):
-        """
-        Lets you add a status to the list of statuses
-        """
+        """Lets you add a status to the list of statuses"""
+
         if context.message.author.id in config["owners"]:
             try:
-                with open("config.json") as file:
-                    body = json.load(file)
-                if (args in body['statuses']):
+                with open("config.json", encoding="utf-8") as infile:
+                    body = json.load(infile)
+                if args in body['statuses']:
                     embed = discord.Embed(
                         title="Error!",
                         description=f"**{args}** is already in the statuses.",
@@ -213,8 +202,8 @@ class owner(commands.Cog, name="owner"):
                     description=f"**{args}** has been successfully added to the statuses.",
                     color=0x42F56C
                 )
-                with open("config.json") as file:
-                    body = json.load(file)
+                with open("config.json", encoding="utf-8") as infile:
+                    body = json.load(infile)
                 embed.set_footer(
                     text=f"There are now {len(body['statuses'])} statuses."
                 )
@@ -222,7 +211,8 @@ class owner(commands.Cog, name="owner"):
             except:
                 embed = discord.Embed(
                     title="Error!",
-                    description=f"An unknown error occurred when trying to add **{args}** to the statuses..",
+                    description=("An unknown error occurred when trying to add "
+                                 f"**{args}** to the statuses."),
                     color=0xE02B2B
                 )
                 await context.send(embed=embed)
@@ -236,9 +226,8 @@ class owner(commands.Cog, name="owner"):
 
     @status.command(name="remove")
     async def status_remove(self, context, *, args):
-        """
-        Lets you remove a status from the list of statuses
-        """
+        """Lets you remove a status from the list of statuses"""
+
         if context.message.author.id in config["owners"]:
             try:
                 json_manager.remove_status_from_config(args)
@@ -247,8 +236,8 @@ class owner(commands.Cog, name="owner"):
                     description=f"**{args}** has been successfully removed from the statuses.",
                     color=0x42F56C
                 )
-                with open("config.json") as file:
-                    body = json.load(file)
+                with open("config.json", encoding="utf-8") as infile:
+                    body = json.load(infile)
                 embed.set_footer(
                     text=f"There are now {len(body['statuses'])} statuses."
                 )
@@ -270,20 +259,19 @@ class owner(commands.Cog, name="owner"):
 
     @status.command(name="set")
     async def status_set(self, context, *, args):
-        """
-        Lets you set the status of the bot
-        """
+        """Lets you set the status of the bot"""
+
         if context.message.author.id in config["owners"]:
             try:
-                await context.bot.change_presence(status=discord.Status.idle, activity=discord.Game(args))
+                await context.bot.change_presence(status=discord.Status.idle,
+                                                  activity=discord.Game(args))
                 embed = discord.Embed(
                     title="Status set",
                     description=f"**{args}** has been successfully set to bot.",
                     color=0x42F56C
                 )
                 await context.send(embed=embed)
-            except Exception as e:
-                print(e)
+            except:
                 embed = discord.Embed(
                     title="Error!",
                     description=f"**{args}** was unable to be set.",
@@ -300,4 +288,5 @@ class owner(commands.Cog, name="owner"):
 
 
 def setup(bot):
-    bot.add_cog(owner(bot))
+    """Add Owner commands to cogs"""
+    bot.add_cog(Owner(bot))

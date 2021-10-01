@@ -9,3 +9,4 @@ Here is the list of all the updates that I made to this Bot.
 * Added `Music` commands
 * Updated [README](README.md)
 * Updated [LICENSE](LICENSE.md)
+* Follows [Pylint linting](https://pylint.org/)
