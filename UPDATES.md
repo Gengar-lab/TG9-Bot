@@ -2,6 +2,10 @@
 
 Here is the list of all the updates that I made to this Bot.
 
+### Version 1.2
+* Major Code Refactor
+* Improved Performance
+
 ### Version 1.1
 
 * Removed `Bitcoin` command

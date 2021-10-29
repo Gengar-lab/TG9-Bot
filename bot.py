@@ -6,9 +6,9 @@ This is a template to create your own discord bot in python.
 
 Version: 2.8
 ------------------------------------------------------------------------------
-Copyright © Xoti-lab 2021 - https://github.com/Xoti-lab
+Copyright © Gengar-lab 2021 - https://github.com/Gengar-lab
 
-Version: 1.1
+Version: 1.1v
 ------------------------------------------------------------------------------
 """
 
@@ -21,13 +21,11 @@ import sys
 from dotenv import load_dotenv
 
 import discord
+from discord import Embed
 from discord.ext import commands, tasks
-from discord.ext.commands import Bot
+from discord.ext.commands import Bot, Context
 
 # pylint: disable=broad-except
-
-load_dotenv()
-TOKEN = os.environ.get("TOKEN")
 
 if not os.path.isfile("config.json"):
     sys.exit("'config.json' not found! Please add it and try again.")
@@ -35,6 +33,8 @@ else:
     with open("config.json", encoding="utf-8") as file:
         config = json.load(file)
 
+load_dotenv()
+TOKEN = os.environ.get("TOKEN")
 
 intents = discord.Intents.default()
 
@@ -61,8 +61,7 @@ async def status_task():
         body = json.load(infile)
         status = random.choice(body["statuses"])
         await bot.change_presence(status=discord.Status.idle,
-                                  activity=discord.Game(status)
-                                  )
+                                  activity=discord.Game(status))
 
 
 # Removes the default help command of discord.py to be able to create our custom help command.
@@ -81,7 +80,7 @@ if __name__ == "__main__":
 
 
 @bot.event
-async def on_message(message):
+async def on_message(message: Context):
     """The code in this event is executed every time someone sends a message"""
 
     # Ignores if a command is being executed by a bot or by the bot itself
@@ -96,7 +95,7 @@ async def on_message(message):
 
 
 @bot.event
-async def on_command_completion(ctx):
+async def on_command_completion(ctx: Context):
     """The code in this event is executed every time a command has been *successfully* executed"""
 
     full_command_name = ctx.command.qualified_name
@@ -107,14 +106,38 @@ async def on_command_completion(ctx):
 
 
 @bot.event
-async def on_command_error(context, error):
+async def on_command_error(ctx: Context, error):
     """The code in this event is executed every time a valid commands catches an error"""
 
-    if isinstance(error, commands.CommandOnCooldown):
+    if isinstance(error, commands.MissingRequiredArgument):
+        args = ""
+        args = [args.join(i) for i in str(error).split("_")]
+        embed = Embed(
+            title="Error!",
+            description=args.strip().capitalize(),
+            color=0xE02B2B
+        )
+        await ctx.send(embed=embed)
+
+    elif isinstance(error, commands.MissingPermissions):
+        embed = Embed(
+            title="Error!",
+            description=f"You are missing the permission `,{error.missing_perms}"
+                        "` to execute this command!",
+            color=0xE02B2B
+        )
+        await ctx.send(embed=embed)
+
+    elif isinstance(error, commands.CommandNotFound):
+        err = str(error.args[1]).split('"')[1]
+        print(f"Unknown command {err} in {ctx.guild.name} (ID: {ctx.message.guild.id})"
+              f" by {ctx.message.author} (ID: {ctx.message.author.id})")
+
+    elif isinstance(error, commands.CommandOnCooldown):
         minutes, seconds = divmod(error.retry_after, 60)
         hours, minutes = divmod(minutes, 60)
         hours = hours % 24
-        embed = discord.Embed(
+        embed = Embed(
             title="Hey, please slow down!",
             description="You can use this command again in "
                         f"{f'{round(hours)} hours' if round(hours) > 0 else ''} "
@@ -122,23 +145,9 @@ async def on_command_error(context, error):
                         f"{f'{round(seconds)} seconds' if round(seconds) > 0 else ''}.",
             color=0xE02B2B
         )
-        await context.send(embed=embed)
-    elif isinstance(error, commands.MissingPermissions):
-        embed = discord.Embed(
-            title="Error!",
-            description=f"You are missing the permission `,{error.missing_perms}"
-                        "` to execute this command!",
-            color=0xE02B2B
-        )
-        await context.send(embed=embed)
-    elif isinstance(error, commands.MissingRequiredArgument):
-        embed = discord.Embed(
-            title="Error!",
-            description=str(error).capitalize(),
-            color=0xE02B2B
-        )
-        await context.send(embed=embed)
-    raise error
+        await ctx.send(embed=embed)
+    else:
+        raise error
 
 
 # Run the bot with the token

@@ -4,8 +4,9 @@ Stores help command of Bot
 
 import json
 
-import discord
+from discord import Embed
 from discord.ext import commands
+from discord.ext.commands import Bot, Context
 
 with open("config.json", encoding="utf-8") as file:
     config = json.load(file)
@@ -14,17 +15,17 @@ with open("config.json", encoding="utf-8") as file:
 class Help(commands.Cog, name="help"):
     """Help Commands"""
 
-    def __init__(self, bot):
+    def __init__(self, bot: Bot):
         self.bot = bot
 
     @commands.command(name="help")
-    async def help(self, context):
+    async def help(self, ctx: Context):
         """List all commands from every Cog the bot has loaded."""
 
         prefix = config["bot_prefix"]
         if not isinstance(prefix, str):
             prefix = prefix[0]
-        embed = discord.Embed(
+        embed = Embed(
             title="Help", description="List of available commands:",
             color=0x42F56C
         )
@@ -37,9 +38,9 @@ class Help(commands.Cog, name="help"):
                         f"{prefix}{n} - {h}" for n, h in zip(command_list, command_description))
             embed.add_field(name=i.capitalize(),
                             value=f"```{help_text}```", inline=False)
-        await context.send(embed=embed)
+        await ctx.send(embed=embed)
 
 
-def setup(bot):
+def setup(bot: Bot):
     """Add Help commands to cogs"""
     bot.add_cog(Help(bot))
