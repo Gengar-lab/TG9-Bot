@@ -1,14 +1,19 @@
 # Updates List
 
-Here is the list of all the updates that I made to this Bot.
+Here is the list of all the updates to this Bot.
+### Version 1.3
+* Upgraded to discord.py 2.0
+* Upgraded commands to [Hybrid Command](https://discordpy.readthedocs.io/en/stable/ext/commands/commands.html#hybrid-commands)
+* Code Tyding
+* Updated [README](README.md)
+* No longer follows Pylint linting
 
 ### Version 1.2
-* Major Code Refactor
+* Slight Code Refactor
 * Improved Performance
 
 ### Version 1.1
 
-* Removed `Bitcoin` command
 * Added `Status` command
 * Added `Music` commands
 * Updated [README](README.md)

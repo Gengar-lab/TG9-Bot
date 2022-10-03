@@ -1,27 +1,28 @@
-"""
-Stores fun commands of Bot
-"""
+"""Stores fun commands of Bot"""
 
+import json
 import random
 import asyncio
 import aiohttp
 
-from discord import Embed
+import discord
 from discord.ext import commands
-from discord.ext.commands import BucketType, Bot, Context
 
-# pylint: disable=no-member, too-many-boolean-expressions
+with open("config.json", encoding="utf-8") as file:
+    config = json.load(file)
 
 
 class Fun(commands.Cog, name="fun"):
     """Fun Commands"""
 
-    def __init__(self, bot: Bot):
+    def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    @commands.command(name="dailyfact")
-    @commands.cooldown(1, 86400, BucketType.user)
-    async def dailyfact(self, ctx: Context):
+    @commands.hybrid_command(name="dailyfact",
+                             description="Sends a fact"
+                             )
+    @commands.cooldown(1, 86400, commands.BucketType.user)
+    async def dailyfact(self, ctx):
         """Get a daily fact, command can only be ran once every day per user."""
 
         # This will prevent your bot from stopping everything when doing a web request
@@ -30,13 +31,13 @@ class Fun(commands.Cog, name="fun"):
             async with session.get(web_link) as request:
                 if request.status == 200:
                     data = await request.json()
-                    embed = Embed(
+                    embed = discord.Embed(
                         description=data["text"],
                         color=0xD75BF4
                     )
                     await ctx.send(embed=embed)
                 else:
-                    embed = Embed(
+                    embed = discord.Embed(
                         title="Error!",
                         description="There is something wrong with the API, please try again later",
                         color=0xE02B2B
@@ -45,8 +46,10 @@ class Fun(commands.Cog, name="fun"):
                     # We need to reset the cool down since the user didn't got his daily fact.
                     self.dailyfact.reset_cooldown(ctx)
 
-    @commands.command(name="rps")
-    async def rock_paper_scissors(self, ctx: Context):
+    @commands.hybrid_command(name="rps",
+                             description="Play Rock, Paper, Scissors"
+                             )
+    async def rock_paper_scissors(self, ctx):
         """Play Rock, Paper, Scissors"""
 
         reactions = {
@@ -54,12 +57,12 @@ class Fun(commands.Cog, name="fun"):
             "🧻": 1,
             "✂": 2
         }
-        embed = Embed(
+        embed = discord.Embed(
             title="Please choose",
             color=0xF59E42
         )
         embed.set_author(name=ctx.author.display_name,
-                         icon_url=ctx.author.avatar_url)
+                         icon_url=ctx.author.display_avatar.url)
         choose_message = await ctx.send(embed=embed)
         for emoji in reactions:
             await choose_message.add_reaction(emoji)
@@ -78,9 +81,9 @@ class Fun(commands.Cog, name="fun"):
             bot_choice_emote = random.choice(list(reactions.keys()))
             bot_choice_index = reactions[bot_choice_emote]
 
-            result_embed = Embed(color=0x42F56C)
+            result_embed = discord.Embed(color=0x42F56C)
             result_embed.set_author(name=ctx.author.display_name,
-                                    icon_url=ctx.author.avatar_url)
+                                    icon_url=ctx.author.display_avatar.url)
             await choose_message.clear_reactions()
 
             if user_choice_index == bot_choice_index:
@@ -105,14 +108,14 @@ class Fun(commands.Cog, name="fun"):
             await choose_message.edit(embed=result_embed)
         except asyncio.exceptions.TimeoutError:
             await choose_message.clear_reactions()
-            timeout_embed = Embed(title="Too late",
-                                  color=0xE02B2B
-                                  )
+            timeout_embed = discord.Embed(title="Too late",
+                                          color=0xE02B2B
+                                          )
             timeout_embed.set_author(name=ctx.author.display_name,
-                                     icon_url=ctx.author.avatar_url)
+                                     icon_url=ctx.author.display_avatar.url)
             await choose_message.edit(embed=timeout_embed)
 
 
-def setup(bot: Bot):
+async def setup(bot: commands.Bot):
     """Add Fun commands to cogs"""
-    bot.add_cog(Fun(bot))
+    await bot.add_cog(Fun(bot))

@@ -1,35 +1,29 @@
-"""
-Stores general commands of Bot
-"""
+"""Stores general commands of Bot"""
 
-import json
-from platform import python_version
 import random
+from platform import python_version
 
 import discord
-from discord import Embed
 from discord.ext import commands
-from discord.ext.commands import Bot, Context
 
-# pylint: disable=no-self-use
 
-BOT_VERSION = "1.2v"
-
-with open("config.json", encoding="utf-8") as file:
-    config = json.load(file)
+BOT_VERSION = "1.3v"
 
 
 class General(commands.Cog, name="general"):
     """General Commands"""
 
-    def __init__(self, bot: Bot):
+    def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    @commands.command(name="info", aliases=["botinfo"])
-    async def info(self, ctx: Context):
+    @commands.hybrid_command(name="info",
+                             aliases=["botinfo"],
+                             description="Get info about Bot"
+                             )
+    async def info(self, ctx):
         """Get some useful (or not) information about the bot."""
 
-        embed = Embed(
+        embed = discord.Embed(
             description="Made by Gengar",
             color=0x42F56C
         )
@@ -53,15 +47,17 @@ class General(commands.Cog, name="general"):
         )
         embed.add_field(
             name="Prefix:",
-            value=f"{config['bot_prefix']}",
+            value=f"{self.bot.config['bot_prefix']}",
             inline=False
         )
         embed.set_footer(text=f"Requested by {ctx.author}")
         await ctx.send(embed=embed)
 
-    @commands.command(name="serverinfo")
+    @commands.hybrid_command(name="serverinfo",
+                             description="Get info about Server"
+                             )
     @commands.guild_only()
-    async def serverinfo(self, ctx: Context):
+    async def serverinfo(self, ctx):
         """Get some useful (or not) information about the server."""
 
         server = ctx.message.guild
@@ -76,13 +72,13 @@ class General(commands.Cog, name="general"):
         time = time.split(" ")
         time = time[0]
 
-        embed = Embed(
+        embed = discord.Embed(
             title="**Server Name:**",
             description=f"{server}",
             color=0x42F56C
         )
         embed.set_thumbnail(
-            url=server.icon_url
+            url=server.icon.url
         )
         embed.add_field(
             name="Owner",
@@ -109,23 +105,28 @@ class General(commands.Cog, name="general"):
         )
         await ctx.send(embed=embed)
 
-    @commands.command(name="ping")
-    async def ping(self, ctx: Context):
+    @commands.hybrid_command(name="ping",
+                             description="Get Bot ping"
+                             )
+    async def ping(self, ctx):
         """Check if the bot is alive."""
 
-        embed = Embed(
+        embed = discord.Embed(
             title="🏓 Pong!",
             description=f"The bot latency is {round(self.bot.latency * 1000)}ms.",
             color=0x42F56C
         )
         await ctx.send(embed=embed)
 
-    @commands.command(name="server", aliases=["support", "supportserver"])
-    async def server(self, ctx: Context):
+    @commands.hybrid_command(name="server",
+                             aliases=["support", "supportserver"],
+                             description="Get support Server"
+                             )
+    async def server(self, ctx):
         """Get the invite link of the discord server of the bot for some support."""
 
         server_link = "https://discord.gg/Z4vEvCC8Vf"
-        embed = Embed(
+        embed = discord.Embed(
             description=f"Join the support server for the bot by clicking [here]({server_link}).",
             color=0xD75BF4
         )
@@ -135,12 +136,14 @@ class General(commands.Cog, name="general"):
         except discord.Forbidden:
             await ctx.send(embed=embed)
 
-    @commands.command(name="poll")
+    @commands.hybrid_command(name="poll",
+                             description="Generate a poll"
+                             )
     @commands.guild_only()
-    async def poll(self, ctx: Context, *, title: str):
+    async def poll(self, ctx, *, title: str):
         """Create a poll where members can vote."""
 
-        embed = Embed(
+        embed = discord.Embed(
             title="A new poll has been created!",
             description=f"{title}",
             color=0x42F56C
@@ -152,8 +155,10 @@ class General(commands.Cog, name="general"):
         await embed_message.add_reaction("👎")
         await embed_message.add_reaction("🤷")
 
-    @commands.command(name="8ball")
-    async def eight_ball(self, ctx: Context, *, question: str):
+    @commands.hybrid_command(name="8ball",
+                             descripton="Ask any question to the bot"
+                             )
+    async def eight_ball(self, ctx, *, question: str):
         """Ask any question to the bot."""
 
         answers = ["It is certain.", "It is decidedly so.", "You may rely on it.",
@@ -162,7 +167,7 @@ class General(commands.Cog, name="general"):
                    "Ask again later.", "Better not tell you now.", "Cannot predict now.",
                    "Concentrate and ask again later.", "Don't count on it.", "My reply is no.",
                    "My sources say no.", "Outlook not so good.", "Very doubtful."]
-        embed = Embed(
+        embed = discord.Embed(
             title="**My Answer:**",
             description=f"{answers[random.randint(0, len(answers))]}",
             color=0x42F56C
@@ -171,6 +176,6 @@ class General(commands.Cog, name="general"):
         await ctx.send(embed=embed)
 
 
-def setup(bot: Bot):
+async def setup(bot: commands.Bot):
     """Add General commands to cogs"""
-    bot.add_cog(General(bot))
+    await bot.add_cog(General(bot))

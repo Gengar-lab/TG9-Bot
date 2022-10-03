@@ -1,150 +1,21 @@
-"""
-Stores music commands of Bot
-"""
+"""Stores music commands of Bot"""
 
 import itertools
-import asyncio
-from async_timeout import timeout
-from youtube_dl import YoutubeDL
 
 import discord
-from discord import Embed, Guild
 from discord.ext import commands
-from discord.ext.commands import Bot, Context
 
-# pylint: disable=too-many-instance-attributes, protected-access, no-self-use
-
-FFMPEG_OPTIONS = {
-    "before_options": "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5",
-    "options": "-vn",
-}
-YDL_OPTIONS = {
-    "format": "bestaudio",
-    "noplaylist": True,
-    "nocheckcertificate": True,
-    "ignoreerrors": False,
-    "logtostderr": False,
-    "quiet": True,
-    "no_warnings": True,
-    "default_search": "auto",
-}
-
-ytdl = YoutubeDL(YDL_OPTIONS)
-
-
-class VoiceChError(Exception):
-    """Custom Voice Channel error"""
-
-
-class YTDLSource:
-    """Create YTDL Source for playing music"""
-
-    def __init__(self, source, *, data, requester):
-        self.source = source
-        self.requester = requester
-
-        self.webpage_url = data.get("webpage_url")
-        self.title = data.get("title")
-
-    def __getitem__(self, item: str):
-        return self.__getattribute__(item)
-
-    @classmethod
-    async def create_source(cls, ctx: Context, search: str, *, loop):
-        """Create source from song name"""
-
-        loop = loop or asyncio.get_event_loop()
-
-        data = ytdl.extract_info(f"ytsearch:{search}", download=False)
-
-        if "entries" in data:
-            # take first item from a playlist
-            data = data["entries"][0]
-            url = data["formats"][0]["url"]
-            name = data["title"]
-
-        embed = Embed(title="Added",
-                      description=f"Added {name} to the Queue.",
-                      color=0x42F56C)
-        await ctx.send(embed=embed)
-        source = await discord.FFmpegOpusAudio.from_probe(url, **FFMPEG_OPTIONS)
-
-        return cls(source=source, data=data, requester=ctx.author)
-
-
-class MusicPlayer:
-    """Music player loop"""
-
-    __slots__ = ("bot", "_guild", "_channel", "_cog",
-                 "queue", "next", "current", "now_playing_msg")
-
-    def __init__(self, ctx: Context):
-        self.bot: Bot = ctx.bot
-        self._guild: Guild = ctx.guild
-        self._channel = ctx.channel
-        self._cog = ctx.cog
-
-        self.queue = asyncio.Queue()
-        self.next = asyncio.Event()
-
-        self.now_playing_msg = None  # Now playing message
-        self.current = None
-
-        ctx.bot.loop.create_task(self.player_loop())
-
-    async def player_loop(self):
-        """Our main player loop."""
-
-        await self.bot.wait_until_ready()
-
-        while not self.bot.is_closed():
-            self.next.clear()
-
-            try:
-                # Wait for the next song. If we timeout cancel the player and disconnect...
-                async with timeout(300):  # 5 minutes...
-                    song: YTDLSource = await self.queue.get()
-            except asyncio.TimeoutError:
-                embed = Embed(title="Disconnected",
-                              description="Bot Disconnected due to Emptiness feeling",
-                              color=0xE02B2B)
-                await self._channel.send(embed=embed)
-                return self.destroy(self._guild)
-
-            self.current = song
-
-            self._guild.voice_client.play(song.source,
-                                          after=lambda _: self.bot.loop.call_soon_threadsafe(
-                                              self.next.set)
-                                          )
-            np_text = (f"**Now Playing:** `{song.title}` requested by "
-                       f"`{song.requester}`\n{song.webpage_url}")
-            self.now_playing_msg = await self._channel.send(np_text)
-            await self.next.wait()
-
-            # Make sure the FFmpeg process is cleaned up.
-            song.source.cleanup()
-            self.current = None
-
-            try:
-                # We are no longer playing this song...
-                await self.now_playing_msg.delete()
-            except discord.HTTPException:
-                pass
-
-    def destroy(self, guild: Guild):
-        """Disconnect and cleanup the player."""
-        return self.bot.loop.create_task(self._cog.cleanup(guild))
-
+from helpers.music_player import MusicPlayer, YTDLSource
+from helpers.exceptions import VoiceChError
 
 class Music(commands.Cog, name="music"):
     """Music Commands"""
 
-    def __init__(self, bot: Bot):
+    def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.players = {}
 
-    async def cleanup(self, guild: Guild):
+    async def cleanup(self, guild: discord.Guild):
         """Cleanup player of guild where bot has stopped playing music"""
 
         try:
@@ -157,8 +28,9 @@ class Music(commands.Cog, name="music"):
         except KeyError:
             pass
 
-    def get_player(self, ctx: Context):
+    def get_player(self, ctx):
         """Retrieve the guild player, or generate one."""
+
         try:
             player = self.players[ctx.guild.id]
         except KeyError:
@@ -167,8 +39,26 @@ class Music(commands.Cog, name="music"):
 
         return player
 
-    @commands.command(name="play", aliases=["p"])
-    async def play(self, ctx: Context, *, url: str):
+    async def join(self, ctx):
+        """Join Music Channel"""
+
+        if ctx.author.voice is None:
+            embed = discord.Embed(description="Join a voice channel first!",
+                                  color=0xE02B2B)
+            await ctx.send(embed=embed)
+            raise VoiceChError
+        voice_channel = ctx.author.voice.channel
+        if ctx.voice_client is None:
+            await voice_channel.connect()
+        else:
+            await ctx.voice_client.move_to(voice_channel)
+
+    @commands.hybrid_command(name="play",
+                             aliases=["p"],
+                             description="Play Music"
+                             )
+    @commands.guild_only()
+    async def play(self, ctx, *, url: str):
         """Play Music"""
 
         try:
@@ -182,61 +72,62 @@ class Music(commands.Cog, name="music"):
         except VoiceChError:
             return
 
-    async def join(self, ctx: Context):
-        """Join Music Channel"""
-
-        if ctx.author.voice is None:
-            embed = Embed(description="Join a voice channel first!",
-                          color=0xE02B2B)
-            await ctx.send(embed=embed)
-            raise VoiceChError
-        voice_channel = ctx.author.voice.channel
-        if ctx.voice_client is None:
-            await voice_channel.connect()
-        else:
-            await ctx.voice_client.move_to(voice_channel)
-
-    @commands.command(name="pause", aliases=["stop"])
-    async def pause(self, ctx: Context):
+    @commands.hybrid_command(name="pause",
+                             aliases=["stop"],
+                             description="Pause Music"
+                             )
+    @commands.guild_only()
+    async def pause(self, ctx):
         """Pause Music"""
 
         if ctx.voice_client.is_paused():
             return
         ctx.voice_client.pause()
-        embed = Embed(description="Song paused",
-                      colour=0xF59E42)
+        embed = discord.Embed(description="Song paused",
+                              colour=0xF59E42)
         await ctx.send(embed=embed)
 
-    @commands.command(name="resume")
-    async def resume(self, ctx: Context):
+    @commands.hybrid_command(name="resume",
+                             description="Resume Music"
+                             )
+    @commands.guild_only()
+    async def resume(self, ctx):
         """Resume Music"""
 
         if ctx.voice_client.is_playing():
             return
         ctx.voice_client.resume()
-        embed = Embed(description="Song resumed",
-                      colour=0xF59E42)
+        embed = discord.Embed(description="Song resumed",
+                              colour=0xF59E42)
         await ctx.send(embed=embed)
 
-    @commands.command(name="disconnect", aliases=["leave", "dc"])
-    async def disconnect(self, ctx: Context):
-        """Disconnect from voice channel"""
+    @commands.hybrid_command(name="disconnect",
+                             aliases=["leave", "dc"],
+                             description="Disconnect bot from voice channel"
+                             )
+    @commands.guild_only()
+    async def disconnect(self, ctx):
+        """Disconnect bot from voice channel"""
 
         vc_client = ctx.voice_client
         if not vc_client or not vc_client.is_connected():
-            embed = Embed(description="Bot already disconnected",
-                          color=0x42F56C)
+            embed = discord.Embed(description="Bot already disconnected",
+                                  color=0x42F56C)
             return await ctx.send(embed=embed)
 
         await ctx.voice_client.disconnect()
-        embed = Embed(description="Bot disconnected",
-                      color=0x42F56C)
+        embed = discord.Embed(description="Bot disconnected",
+                              color=0x42F56C)
         await self.cleanup(ctx.guild)
         await ctx.send(embed=embed)
 
-    @commands.command(name="queue", aliases=["q", "playlist"])
-    async def queue_info(self, ctx: Context):
-        """Diaplays Song Queue"""
+    @commands.hybrid_command(name="queue",
+                             aliases=["q", "playlist"],
+                             description="Displays Song Queue"
+                             )
+    @commands.guild_only()
+    async def queue_info(self, ctx):
+        """Displays Song Queue"""
 
         vc_client = ctx.voice_client
 
@@ -245,22 +136,26 @@ class Music(commands.Cog, name="music"):
 
         player = self.get_player(ctx)
         if player.queue.empty():
-            embed = Embed(title="Empty Queue",
-                          description="There are currently no more queued songs.",
-                          color=0xFF8C00)
+            embed = discord.Embed(title="Empty Queue",
+                                  description="There are currently no more queued songs.",
+                                  color=0xFF8C00)
             return await ctx.send(embed=embed)
 
         # Grab up to 5 entries from the queue...
         upcoming = list(itertools.islice(player.queue._queue, 0, 5))
 
         fmt = "\n".join(f'**`{_["title"]}`**' for _ in upcoming)
-        embed = Embed(
+        embed = discord.Embed(
             title=f"Upcoming - Next {len(upcoming)}", description=fmt, color=0xFF8C00)
 
         await ctx.send(embed=embed)
 
-    @commands.command(name="playing", aliases=["np", "current", "now_playing"])
-    async def now_playing(self, ctx: Context):
+    @commands.hybrid_command(name="playing",
+                             aliases=["np", "current", "now_playing"],
+                             description="Shows current playing song"
+                             )
+    @commands.guild_only()
+    async def now_playing(self, ctx):
         """Shows current playing song"""
 
         vc_client = ctx.voice_client
@@ -283,6 +178,6 @@ class Music(commands.Cog, name="music"):
                                                 f"\n{player.current.webpage_url}")
 
 
-def setup(bot: Bot):
+async def setup(bot: commands.Bot):
     """Add Music commands to cogs"""
-    bot.add_cog(Music(bot))
+    await bot.add_cog(Music(bot))

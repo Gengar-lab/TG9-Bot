@@ -1,31 +1,25 @@
-"""
-Stores help command of Bot
-"""
+"""Stores help command of Bot"""
 
-import json
-
-from discord import Embed
+import discord
 from discord.ext import commands
-from discord.ext.commands import Bot, Context
-
-with open("config.json", encoding="utf-8") as file:
-    config = json.load(file)
 
 
 class Help(commands.Cog, name="help"):
     """Help Commands"""
 
-    def __init__(self, bot: Bot):
+    def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    @commands.command(name="help")
-    async def help(self, ctx: Context):
+    @commands.hybrid_command(name="help",
+                             description="Get list of all commands"
+                             )
+    async def help(self, ctx):
         """List all commands from every Cog the bot has loaded."""
 
-        prefix = config["bot_prefix"]
+        prefix = self.bot.config["bot_prefix"]
         if not isinstance(prefix, str):
             prefix = prefix[0]
-        embed = Embed(
+        embed = discord.Embed(
             title="Help", description="List of available commands:",
             color=0x42F56C
         )
@@ -36,11 +30,11 @@ class Help(commands.Cog, name="help"):
             command_description = [command.help for command in bot_commands]
             help_text = "\n".join(
                         f"{prefix}{n} - {h}" for n, h in zip(command_list, command_description))
-            embed.add_field(name=i.capitalize(),
+            embed.add_field(name=f"{i.capitalize()}",
                             value=f"```{help_text}```", inline=False)
         await ctx.send(embed=embed)
 
 
-def setup(bot: Bot):
+async def setup(bot: commands.Bot):
     """Add Help commands to cogs"""
-    bot.add_cog(Help(bot))
+    await bot.add_cog(Help(bot))

@@ -1,6 +1,4 @@
-"""
-JSON Helper
-"""
+"""JSON Helper"""
 import json
 
 

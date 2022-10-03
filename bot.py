@@ -1,14 +1,8 @@
 """
 ------------------------------------------------------------------------------
-Copyright © Krypton 2021 - https://github.com/kkrypt0nn
-Description:
-This is a template to create your own discord bot in python.
-
-Version: 2.8
-------------------------------------------------------------------------------
 Copyright © Gengar-lab 2021 - https://github.com/Gengar-lab
 
-Version: 1.1v
+Version: 1.3v
 ------------------------------------------------------------------------------
 """
 
@@ -16,34 +10,35 @@ import json
 import os
 import platform
 import random
-import sys
-
-from dotenv import load_dotenv
 
 import discord
-from discord import Embed
 from discord.ext import commands, tasks
-from discord.ext.commands import Bot, Context
+from dotenv import load_dotenv
 
-# pylint: disable=broad-except
+from helpers import exceptions
 
-if not os.path.isfile("config.json"):
-    sys.exit("'config.json' not found! Please add it and try again.")
-else:
-    with open("config.json", encoding="utf-8") as file:
-        config = json.load(file)
+# Get configuration
+with open("config.json", encoding="utf-8") as file:
+    config = json.load(file)
 
+# Get token of bot
 load_dotenv()
 TOKEN = os.environ.get("TOKEN")
 
+# Set intents
 intents = discord.Intents.default()
+intents.message_content = True
 
-bot = Bot(command_prefix=config["bot_prefix"], intents=intents)
+bot = commands.Bot(command_prefix=commands.when_mentioned_or(config["bot_prefix"]), intents=intents)
+
+# Remove the default help command of discord.py
+bot.remove_command("help")
+bot.config = config
 
 
 @bot.event
 async def on_ready():
-    """The code in this event is executed when the bot is ready"""
+    """This is executed when the bot is ready"""
 
     print(f"Logged in as {bot.user.name}")
     print(f"Discord.py API version: {discord.__version__}")
@@ -53,7 +48,23 @@ async def on_ready():
     status_task.start()
 
 
-@tasks.loop(minutes=60.0)
+@bot.event
+async def setup_hook():
+    """Load our modules when the bot is run"""
+
+    for infile in os.listdir("./cogs"):
+        if infile.endswith(".py"):
+            extension = infile[:-3]
+            try:
+                await bot.load_extension(f"cogs.{extension}")
+                print(f"Loaded extension '{extension}'")
+            except Exception as e:  # If module fails to load, let us know the error
+                exception = f"{type(e).__name__}: {e}"
+                print(f"Failed to load extension {extension}\n{exception}")
+    # await bot.tree.sync()
+
+
+@tasks.loop(minutes=60.0)  # Change status after 60 minutes
 async def status_task():
     """Setup the game status task of the bot"""
 
@@ -64,29 +75,14 @@ async def status_task():
                                   activity=discord.Game(status))
 
 
-# Removes the default help command of discord.py to be able to create our custom help command.
-bot.remove_command("help")
-
-if __name__ == "__main__":
-    for file in os.listdir("./cogs"):
-        if file.endswith(".py"):
-            extension = file[:-3]
-            try:
-                bot.load_extension(f"cogs.{extension}")
-                print(f"Loaded extension '{extension}'")
-            except Exception as e:
-                exception = f"{type(e).__name__}: {e}"
-                print(f"Failed to load extension {extension}\n{exception}")
-
-
 @bot.event
-async def on_message(message: Context):
-    """The code in this event is executed every time someone sends a message"""
+async def on_message(message: discord.Message):
+    """This is executed every time when someone sends a message"""
 
-    # Ignores if a command is being executed by a bot or by the bot itself
+    # Ignore if a command is being executed by a bot or by the bot itself
     if message.author == bot.user or message.author.bot:
         return
-    # Ignores if a command is being executed by a blacklisted user
+    # Ignore if a command is being executed by a blacklisted user
     with open("blacklist.json", encoding="utf-8") as infile:
         blacklist = json.load(infile)
     if message.author.id in blacklist["ids"]:
@@ -95,8 +91,8 @@ async def on_message(message: Context):
 
 
 @bot.event
-async def on_command_completion(ctx: Context):
-    """The code in this event is executed every time a command has been *successfully* executed"""
+async def on_command_completion(ctx: commands.Context):
+    """This is executed every time a command has been successfully executed"""
 
     full_command_name = ctx.command.qualified_name
     split = full_command_name.split(" ")
@@ -106,13 +102,13 @@ async def on_command_completion(ctx: Context):
 
 
 @bot.event
-async def on_command_error(ctx: Context, error):
-    """The code in this event is executed every time a valid commands catches an error"""
+async def on_command_error(ctx: commands.Context, error):
+    """This is executed every time a valid command catches an error"""
 
     if isinstance(error, commands.MissingRequiredArgument):
         args = ""
         args = [args.join(i) for i in str(error).split("_")]
-        embed = Embed(
+        embed = discord.Embed(
             title="Error!",
             description=args.strip().capitalize(),
             color=0xE02B2B
@@ -120,7 +116,7 @@ async def on_command_error(ctx: Context, error):
         await ctx.send(embed=embed)
 
     elif isinstance(error, commands.MissingPermissions):
-        embed = Embed(
+        embed = discord.Embed(
             title="Error!",
             description=f"You are missing the permission `,{error.missing_perms}"
                         "` to execute this command!",
@@ -129,7 +125,7 @@ async def on_command_error(ctx: Context, error):
         await ctx.send(embed=embed)
 
     elif isinstance(error, commands.CommandNotFound):
-        err = str(error.args[1]).split('"')[1]
+        err = str(error.args).split(',')[0]
         print(f"Unknown command {err} in {ctx.guild.name} (ID: {ctx.message.guild.id})"
               f" by {ctx.message.author} (ID: {ctx.message.author.id})")
 
@@ -137,7 +133,7 @@ async def on_command_error(ctx: Context, error):
         minutes, seconds = divmod(error.retry_after, 60)
         hours, minutes = divmod(minutes, 60)
         hours = hours % 24
-        embed = Embed(
+        embed = discord.Embed(
             title="Hey, please slow down!",
             description="You can use this command again in "
                         f"{f'{round(hours)} hours' if round(hours) > 0 else ''} "
@@ -146,9 +142,17 @@ async def on_command_error(ctx: Context, error):
             color=0xE02B2B
         )
         await ctx.send(embed=embed)
+    elif isinstance(error, exceptions.UserNotOwner):
+        embed = discord.Embed(
+            title="Error!",
+            description="You don't have the permission to use this command.",
+            color=0xE02B2B
+        )
+        await ctx.send(embed=embed)
+    elif isinstance(error, exceptions.VoiceChError):
+        print(error.description)
     else:
         raise error
 
-
-# Run the bot with the token
-bot.run(TOKEN)
+if __name__ == "__main__":
+    bot.run(TOKEN)  # Run the bot with the token
