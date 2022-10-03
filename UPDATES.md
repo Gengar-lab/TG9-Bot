@@ -4,7 +4,7 @@ Here is the list of all the updates to this Bot.
 ### Version 1.3
 * Upgraded to discord.py 2.0
 * Upgraded commands to [Hybrid Command](https://discordpy.readthedocs.io/en/stable/ext/commands/commands.html#hybrid-commands)
-* Code Tyding
+* Code Tidying
 * Updated [README](README.md)
 * No longer follows Pylint linting
 
